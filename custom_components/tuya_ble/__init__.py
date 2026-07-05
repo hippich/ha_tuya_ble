@@ -51,6 +51,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await device.initialize()
     product_info = get_device_product_info(device)
 
+    if device.product_id == "d4vpmigg" or device.category == "sfkzq":
+        _LOGGER.info(
+            "d4vpmigg device: category=%s product_id=%s name=%s",
+            device.category,
+            device.product_id,
+            device.name,
+        )
+        _LOGGER.info(
+            "d4vpmigg functions (code -> dp_id): %s",
+            {code: func.dp_id for code, func in device.function.items()},
+        )
+        _LOGGER.info(
+            "d4vpmigg status_range (code -> dp_id): %s",
+            {code: func.dp_id for code, func in device.status_range.items()},
+        )
+
     coordinator = TuyaBLECoordinator(hass, device)
 
     """

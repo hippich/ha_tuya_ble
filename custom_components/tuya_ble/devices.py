@@ -12,7 +12,6 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import (
     DeviceInfo,
     EntityDescription,
-    generate_entity_id,
 )
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import (
@@ -102,9 +101,9 @@ class TuyaBLEEntity(CoordinatorEntity):
         self._attr_has_entity_name = True
         self._attr_device_info = get_device_info(self._device)
         self._attr_unique_id = f"{self._device.device_id}-{description.key}"
-        self.entity_id = generate_entity_id(
-            "sensor.{}", self._attr_unique_id, hass=hass
-        )
+        # Do not force entity_id here. Forcing "sensor." for all platforms
+        # causes wrong-domain entity IDs (e.g. sensor.xxx for a switch).
+        # HA will generate correct domain-prefixed entity IDs from unique_id + platform.
 
     @property
     def available(self) -> bool:
@@ -291,6 +290,34 @@ class TuyaBLECoordinator(DataUpdateCoordinator[None]):
         """Just trigger the callbacks."""
         self._async_handle_connect()
         self.async_set_updated_data(None)
+
+        # Diagnostic logging for new/unsupported devices to discover dpIds
+        if self._device.product_id == "d4vpmigg":
+            # Build reverse map code name from cloud spec if available
+            code_for_dp = {}
+            for d in (self._device.function, self._device.status_range):
+                for code, func in d.items():
+                    if func.dp_id not in code_for_dp:
+                        code_for_dp[func.dp_id] = code
+
+            dp_snapshot = {}
+            for dp_id, dp in self._device.datapoints.items():
+                entry = {"type": dp.type.name, "value": dp.value}
+                if dp_id in code_for_dp:
+                    entry["code"] = code_for_dp[dp_id]
+                dp_snapshot[dp_id] = entry
+
+            _LOGGER.info(
+                "d4vpmigg (addr %s) received datapoints: %s",
+                self._device.address,
+                dp_snapshot,
+            )
+            if updates:
+                _LOGGER.info(
+                    "d4vpmigg recent updates: ids=%s",
+                    [u.id for u in updates],
+                )
+
         info = get_device_product_info(self._device)
         if info and info.fingerbot and info.fingerbot.manual_control != 0:
             for update in updates:
@@ -555,6 +582,7 @@ devices_database: dict[str, TuyaBLECategoryInfo] = {
                 [
                     "svhikeyq",
                     "0axr5s0b",
+                    "d4vpmigg",
                 ],  # device product_id
                 TuyaBLEProductInfo(
                     name="Valve controller",

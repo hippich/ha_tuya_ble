@@ -168,7 +168,7 @@ mapping: dict[str, TuyaBLECategorySwitchMapping] = {
     "sfkzq": TuyaBLECategorySwitchMapping(
         products={
             **dict.fromkeys(
-                ["0axr5s0b", "46zia2nz", "1fcnd8xk"],
+                ["0axr5s0b", "46zia2nz", "1fcnd8xk", "d4vpmigg"],
                 [
                     TuyaBLESwitchMapping(
                         dp_id=1,
